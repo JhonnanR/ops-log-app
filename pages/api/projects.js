@@ -1,4 +1,6 @@
-import { notion, DB, plainText } from "../../lib/notion";
+import { notion, plainText } from "../../lib/notion";
+import { getPropById } from "../../lib/notion-helpers";
+import { PROJECTS } from "../../lib/notion-schema";
 
 export default async function handler(req, res) {
   if (req.method !== "GET") return res.status(405).end();
@@ -9,32 +11,30 @@ export default async function handler(req, res) {
 
     do {
       const response = await notion.databases.query({
-        database_id: DB.projects,
-        filter: {
-          and: [
-            { property: "Status", select: { does_not_equal: "Completed" } },
-            { property: "Status", select: { does_not_equal: "Punch" } },
-            {
-              property: "Division",
-              multi_select: { does_not_contain: "Brick" },
-            },
-          ],
-        },
+        database_id: PROJECTS.dataSource,
         start_cursor: cursor,
       });
 
       for (const page of response.results) {
+        const props = page.properties;
+        const status = getPropById(props, PROJECTS.fields.status)?.select?.name || "";
+        const division = (
+          getPropById(props, PROJECTS.fields.division)?.multi_select || []
+        ).map((d) => d.name);
+
+        if (status === "Completed" || status === "Punch") continue;
+        if (division.includes("Brick")) continue;
+
         results.push({
           id: page.id,
-          name: plainText(page.properties["Project Name"]),
-          opsLogCreated: !!page.properties["Ops Log Created"]?.checkbox,
+          name: plainText(getPropById(props, PROJECTS.fields.name)),
+          opsLogCreated: !!getPropById(props, PROJECTS.fields.opsLogCreated)?.checkbox,
         });
       }
 
       cursor = response.has_more ? response.next_cursor : undefined;
     } while (cursor);
 
-    // Ops Log Created projects sort to the bottom; otherwise alphabetical.
     results.sort((a, b) => {
       if (a.opsLogCreated !== b.opsLogCreated) {
         return a.opsLogCreated ? 1 : -1;

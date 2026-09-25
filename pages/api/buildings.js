@@ -1,4 +1,6 @@
-import { notion, DB, plainText } from "../../lib/notion";
+import { notion, plainText } from "../../lib/notion";
+import { getPropById } from "../../lib/notion-helpers";
+import { BUILDINGS } from "../../lib/notion-schema";
 import { syncProjectCompletion } from "../../lib/checkProjectComplete";
 
 export default async function handler(req, res) {
@@ -12,19 +14,19 @@ export default async function handler(req, res) {
 
     do {
       const response = await notion.databases.query({
-        database_id: DB.buildings,
-        filter: {
-          property: "Project",
-          relation: { contains: projectId },
-        },
+        database_id: BUILDINGS.dataSource,
         start_cursor: cursor,
       });
 
       for (const page of response.results) {
+        const props = page.properties;
+        const projectRelation = getPropById(props, BUILDINGS.fields.project)?.relation || [];
+        if (!projectRelation.some((r) => r.id === projectId)) continue;
+
         results.push({
           id: page.id,
-          name: plainText(page.properties["Building Name"]),
-          opsLogCreated: !!page.properties["Ops Log Created"]?.checkbox,
+          name: plainText(getPropById(props, BUILDINGS.fields.name)),
+          opsLogCreated: !!getPropById(props, BUILDINGS.fields.opsLogCreated)?.checkbox,
         });
       }
 
@@ -33,10 +35,6 @@ export default async function handler(req, res) {
 
     results.sort((a, b) => a.name.localeCompare(b.name));
 
-    // Catches the case where a building was marked done outside this app
-    // (manually in Notion, or another automation) — keeps the Project's
-    // own checkbox in sync every time its buildings are viewed, not only
-    // as a side effect of a submission through this app.
     await syncProjectCompletion(projectId);
 
     res.status(200).json({ buildings: results });

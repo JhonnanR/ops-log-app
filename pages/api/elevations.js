@@ -1,4 +1,6 @@
-import { notion, DB } from "../../lib/notion";
+import { notion } from "../../lib/notion";
+import { getPropById } from "../../lib/notion-helpers";
+import { ELEVATIONS } from "../../lib/notion-schema";
 
 export default async function handler(req, res) {
   if (req.method !== "GET") return res.status(405).end();
@@ -11,18 +13,18 @@ export default async function handler(req, res) {
 
     do {
       const response = await notion.databases.query({
-        database_id: DB.elevations,
-        filter: {
-          property: "Building Name",
-          relation: { contains: buildingId },
-        },
+        database_id: ELEVATIONS.dataSource,
         start_cursor: cursor,
       });
 
       for (const page of response.results) {
+        const props = page.properties;
+        const buildingRelation = getPropById(props, ELEVATIONS.fields.buildingName)?.relation || [];
+        if (!buildingRelation.some((r) => r.id === buildingId)) continue;
+
         results.push({
           id: page.id,
-          name: page.properties["Elevation Name"]?.select?.name || "(unnamed)",
+          name: getPropById(props, ELEVATIONS.fields.elevationName)?.select?.name || "(unnamed)",
         });
       }
 

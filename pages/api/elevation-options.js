@@ -1,17 +1,20 @@
-import { notion, DB } from "../../lib/notion";
+import { notion } from "../../lib/notion";
+import { getPropById } from "../../lib/notion-helpers";
+import { ELEVATIONS } from "../../lib/notion-schema";
 
 export default async function handler(req, res) {
   if (req.method !== "GET") return res.status(405).end();
 
   try {
     const source = await notion.databases.retrieve({
-      database_id: DB.elevations,
+      database_id: ELEVATIONS.dataSource,
     });
 
-    const options =
-      source.properties["Elevation Name"]?.select?.options?.map(
-        (o) => o.name
-      ) || [];
+    const elevationNameProp = Object.values(source.properties).find(
+      (p) => p.id === ELEVATIONS.fields.elevationName
+    );
+
+    const options = elevationNameProp?.select?.options?.map((o) => o.name) || [];
 
     res.status(200).json({ options });
   } catch (err) {
