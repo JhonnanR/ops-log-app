@@ -2,6 +2,11 @@ import { notion, plainText } from "../../lib/notion";
 import { getPropById } from "../../lib/notion-helpers";
 import { PROJECTS } from "../../lib/notion-schema";
 
+// Projects with these statuses are hidden. Add more names here if needed
+// (for example "Lost", "Cancelled", "GC Lost", "Lead").
+const HIDDEN_STATUSES = ["Completed", "Punch"];
+const HIDDEN_DIVISIONS = ["Brick"];
+
 export default async function handler(req, res) {
   if (req.method !== "GET") return res.status(405).end();
 
@@ -17,13 +22,15 @@ export default async function handler(req, res) {
 
       for (const page of response.results) {
         const props = page.properties;
-        const status = getPropById(props, PROJECTS.fields.status)?.select?.name || "";
-        const division = (
+        const statusProp = getPropById(props, PROJECTS.fields.status);
+        // Projects v2 uses a "status" column; older versions used "select".
+        const status = statusProp?.status?.name || statusProp?.select?.name || "";
+        const divisions = (
           getPropById(props, PROJECTS.fields.division)?.multi_select || []
         ).map((d) => d.name);
 
-        if (status === "Completed" || status === "Punch") continue;
-        if (division.includes("Brick")) continue;
+        if (HIDDEN_STATUSES.includes(status)) continue;
+        if (divisions.some((d) => HIDDEN_DIVISIONS.includes(d))) continue;
 
         results.push({
           id: page.id,

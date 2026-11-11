@@ -1,5 +1,5 @@
 import { notion } from "../../lib/notion";
-import { getPropById } from "../../lib/notion-helpers";
+import { getPropById, hasRelationTo } from "../../lib/notion-helpers";
 import { ELEVATIONS } from "../../lib/notion-schema";
 
 export default async function handler(req, res) {
@@ -19,8 +19,7 @@ export default async function handler(req, res) {
 
       for (const page of response.results) {
         const props = page.properties;
-        const buildingRelation = getPropById(props, ELEVATIONS.fields.buildingName)?.relation || [];
-        if (!buildingRelation.some((r) => r.id === buildingId)) continue;
+        if (!hasRelationTo(props, buildingId)) continue;
 
         results.push({
           id: page.id,

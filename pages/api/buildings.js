@@ -1,5 +1,5 @@
 import { notion, plainText } from "../../lib/notion";
-import { getPropById } from "../../lib/notion-helpers";
+import { getPropById, hasRelationTo } from "../../lib/notion-helpers";
 import { BUILDINGS } from "../../lib/notion-schema";
 import { syncProjectCompletion } from "../../lib/checkProjectComplete";
 
@@ -20,8 +20,7 @@ export default async function handler(req, res) {
 
       for (const page of response.results) {
         const props = page.properties;
-        const projectRelation = getPropById(props, BUILDINGS.fields.project)?.relation || [];
-        if (!projectRelation.some((r) => r.id === projectId)) continue;
+        if (!hasRelationTo(props, projectId)) continue;
 
         results.push({
           id: page.id,

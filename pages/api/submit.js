@@ -12,16 +12,15 @@ export default async function handler(req, res) {
   }
 
   try {
-    // 1. Create one Elevations DB row per elevation name (if any).
-    // Elevation Code (the title) is intentionally left blank — Rodrigo's
-    // existing Notion automation fills it on "page added".
+    // 1. Create one Elevations row per elevation name (if any).
+    // The Elevations DB no longer has a Project column, so each row links
+    // only to its building.
     const e = ELEVATIONS.fields;
     for (const name of elevationNames) {
       await notion.pages.create({
         parent: { database_id: ELEVATIONS.dataSource },
         properties: {
           [e.buildingName]: { relation: [{ id: buildingId }] },
-          [e.project]: { relation: [{ id: projectId }] },
           [e.elevationName]: { select: { name } },
           [e.submittedBy]: {
             rich_text: [{ text: { content: submittedBy || "" } }],
@@ -30,7 +29,7 @@ export default async function handler(req, res) {
       });
     }
 
-    // 2. Flip the Building's Ops Log Created checkbox.
+    // 2. Mark the building as done.
     await notion.pages.update({
       page_id: buildingId,
       properties: {
@@ -38,7 +37,7 @@ export default async function handler(req, res) {
       },
     });
 
-    // 3. Sync the Project's checkbox using the shared, reusable check.
+    // 3. Mark the project as done if every building is done.
     const allDone = await syncProjectCompletion(projectId);
 
     res.status(200).json({ success: true, projectCompleted: allDone });
