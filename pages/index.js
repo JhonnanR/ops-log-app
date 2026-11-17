@@ -190,13 +190,14 @@ export default function Home() {
   function toggleBuilding(b) {
     setSubmitMessage("");
     setError("");
-    setAddingElevation(false);
     if (expandedBuildingId === b.id) {
       setExpandedBuildingId(null);
+      setAddingElevation(false);
       return;
     }
     setExpandedBuildingId(b.id);
     setElevationRows([emptyRow()]);
+    setAddingElevation(true);
     if (!buildingElevations[b.id]) {
       loadElevationsForBuilding(b.id);
     }
@@ -358,6 +359,12 @@ export default function Home() {
               Continue
             </button>
           </div>
+          {!selectedProjectId && (
+            <p className="hint">
+              Click the Project box above and choose a project from the list to
+              continue.
+            </p>
+          )}
         </>
       )}
 
@@ -381,9 +388,12 @@ export default function Home() {
                     onClick={() => toggleBuilding(b)}
                   >
                     <span>{b.name}</span>
-                    {b.opsLogCreated && (
-                      <span className="badge-done">Completed</span>
-                    )}
+                    <span className="building-right">
+                      {b.opsLogCreated && (
+                        <span className="badge-done">Completed</span>
+                      )}
+                      <span className={`chevron${isOpen ? " open" : ""}`}>▾</span>
+                    </span>
                   </div>
 
                   {isOpen && (
