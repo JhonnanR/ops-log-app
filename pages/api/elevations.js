@@ -10,6 +10,7 @@ export default async function handler(req, res) {
   try {
     const results = [];
     let cursor = undefined;
+    const f = ELEVATIONS.fields;
 
     do {
       const response = await notion.databases.query({
@@ -21,10 +22,14 @@ export default async function handler(req, res) {
         const props = page.properties;
         if (!hasRelationTo(props, buildingId)) continue;
 
+        // Works whether sqGross holds a permanent ID or a column name.
+        const sqProp = getPropById(props, f.sqGross) || props[f.sqGross];
+
         results.push({
           id: page.id,
-          name: getPropById(props, ELEVATIONS.fields.elevationName)?.select?.name || "(unnamed)",
-          page: plainText(getPropById(props, ELEVATIONS.fields.page)),
+          name: getPropById(props, f.elevationName)?.select?.name || "(unnamed)",
+          page: plainText(getPropById(props, f.page)),
+          sq: sqProp?.number ?? null,
         });
       }
 

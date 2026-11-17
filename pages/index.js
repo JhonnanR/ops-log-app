@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 
-const emptyRow = () => ({ name: "", page: "" });
+const emptyRow = () => ({ name: "", page: "", sq: "" });
 
 function AutocompleteInput({ row, onChange, options, onRemove, showRemove, isDuplicate }) {
   const [focused, setFocused] = useState(false);
@@ -25,22 +25,12 @@ function AutocompleteInput({ row, onChange, options, onRemove, showRemove, isDup
           onFocus={() => setFocused(true)}
           onBlur={() => setTimeout(() => setFocused(false), 120)}
         />
-        <input
-          className="page-input"
-          type="text"
-          placeholder="Page #"
-          value={row.page}
-          onChange={(e) => onChange({ page: e.target.value })}
-        />
         {showRemove && (
           <button className="remove" onClick={onRemove} type="button">
             ✕
           </button>
         )}
       </div>
-      {isDuplicate && (
-        <p className="duplicate-msg">✕ Already added for this building</p>
-      )}
       {focused && matches.length > 0 && (
         <div className="suggestions">
           {matches.map((m) => (
@@ -49,6 +39,26 @@ function AutocompleteInput({ row, onChange, options, onRemove, showRemove, isDup
             </div>
           ))}
         </div>
+      )}
+      <div className="fields sub">
+        <input
+          className="page-input"
+          type="text"
+          placeholder="Page (e.g. A-203)"
+          value={row.page}
+          onChange={(e) => onChange({ page: e.target.value })}
+        />
+        <input
+          className="sq-input"
+          type="text"
+          inputMode="decimal"
+          placeholder="SQ. (Gross)"
+          value={row.sq}
+          onChange={(e) => onChange({ sq: e.target.value })}
+        />
+      </div>
+      {isDuplicate && (
+        <p className="duplicate-msg">✕ Already added for this building</p>
       )}
     </div>
   );
@@ -235,13 +245,26 @@ export default function Home() {
 
   async function handleSubmitElevations(building) {
     const entries = elevationRows
-      .map((r) => ({ name: r.name.trim(), page: r.page.trim() }))
+      .map((r) => ({
+        name: r.name.trim(),
+        page: r.page.trim(),
+        sq: r.sq.trim(),
+      }))
       .filter((r) => r.name);
 
     if (getDuplicateFlags(building.id).some(Boolean)) {
       setError("Remove or rename duplicate elevations before submitting.");
       return;
     }
+
+    const badSq = entries.find(
+      (r) => r.sq !== "" && !Number.isFinite(Number(r.sq.replace(/,/g, "")))
+    );
+    if (badSq) {
+      setError(`SQ. (Gross) for "${badSq.name}" must be a number.`);
+      return;
+    }
+
     setSubmitting(true);
     setError("");
     setSubmitMessage("");
@@ -374,9 +397,16 @@ export default function Home() {
                           {existing.map((e) => (
                             <li key={e.id}>
                               <span>{e.name}</span>
-                              {e.page && (
-                                <span className="page-tag">Page {e.page}</span>
-                              )}
+                              <span className="tags">
+                                {e.page && (
+                                  <span className="page-tag">Page {e.page}</span>
+                                )}
+                                {e.sq !== null && e.sq !== undefined && (
+                                  <span className="page-tag">
+                                    {Number(e.sq).toLocaleString()} SQ.
+                                  </span>
+                                )}
+                              </span>
                             </li>
                           ))}
                         </ul>

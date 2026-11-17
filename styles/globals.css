@@ -82,6 +82,7 @@ button {
   justify-content: space-between;
   gap: 8px;
 }
+.tags { display: flex; gap: 6px; flex-wrap: wrap; justify-content: flex-end; }
 .page-tag {
   font-size: 12px;
   font-weight: 600;
@@ -101,10 +102,12 @@ button {
   margin: 4px 0 10px;
 }
 
-.elevation-row { position: relative; margin-top: 10px; }
+.elevation-row { position: relative; margin-top: 12px; }
 .elevation-row .fields { display: flex; gap: 8px; align-items: center; }
+.elevation-row .fields.sub { margin-top: 8px; }
 .elevation-row .fields input.name-input { flex: 1; min-width: 0; }
-.elevation-row .fields input.page-input { width: 96px; flex: none; }
+.elevation-row .fields input.page-input,
+.elevation-row .fields input.sq-input { flex: 1; min-width: 0; }
 .elevation-row .remove {
   background: transparent;
   color: #a3a3a3;

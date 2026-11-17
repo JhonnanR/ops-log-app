@@ -12,7 +12,8 @@ export default async function handler(req, res) {
   }
 
   try {
-    // 1. Create one Elevations row per elevation (name + optional page number).
+    // 1. Create one Elevations row per elevation
+    //    (name, optional page number, optional SQ. gross).
     const e = ELEVATIONS.fields;
     for (const item of elevations) {
       const properties = {
@@ -27,6 +28,13 @@ export default async function handler(req, res) {
         properties[e.page] = {
           rich_text: [{ text: { content: item.page } }],
         };
+      }
+
+      if (item.sq !== undefined && item.sq !== null && String(item.sq).trim() !== "") {
+        const sqNumber = Number(String(item.sq).replace(/,/g, ""));
+        if (Number.isFinite(sqNumber)) {
+          properties[e.sqGross] = { number: sqNumber };
+        }
       }
 
       await notion.pages.create({
