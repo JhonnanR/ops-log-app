@@ -203,6 +203,14 @@ export default function Home() {
     }
   }
 
+  function collapseAll() {
+    setExpandedBuildingId(null);
+    setAddingElevation(false);
+    setElevationRows([emptyRow()]);
+    setSubmitMessage("");
+    setError("");
+  }
+
   function openAddElevation() {
     setElevationRows([emptyRow()]);
     setAddingElevation(true);
@@ -370,7 +378,17 @@ export default function Home() {
 
       {step === "building" && (
         <>
-          <h2 className="section-heading">Buildings</h2>
+          <div className="section-header">
+            <h2 className="section-heading">Buildings</h2>
+            <button
+              className="btn-secondary btn-small"
+              onClick={collapseAll}
+              disabled={!expandedBuildingId}
+              type="button"
+            >
+              Collapse all
+            </button>
+          </div>
           {allBuildingsDone && (
             <div className="banner">
               Every building in this project already has elevations logged.
