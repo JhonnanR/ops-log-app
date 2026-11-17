@@ -44,7 +44,7 @@ function AutocompleteInput({ row, onChange, options, onRemove, showRemove, isDup
         <input
           className="page-input"
           type="text"
-          placeholder="Page (e.g. A-203)"
+          placeholder="Page (e.g. [A-203])"
           value={row.page}
           onChange={(e) => onChange({ page: e.target.value })}
         />
