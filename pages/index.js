@@ -1,38 +1,50 @@
 import { useEffect, useMemo, useState } from "react";
 
-function AutocompleteInput({ value, onChange, options, onRemove, showRemove, isDuplicate }) {
+const emptyRow = () => ({ name: "", page: "" });
+
+function AutocompleteInput({ row, onChange, options, onRemove, showRemove, isDuplicate }) {
   const [focused, setFocused] = useState(false);
 
   const matches = useMemo(() => {
-    const q = value.trim().toLowerCase();
+    const q = row.name.trim().toLowerCase();
     if (!q) return [];
     return options
       .filter((o) => o.toLowerCase().startsWith(q) && o.toLowerCase() !== q)
       .slice(0, 8);
-  }, [value, options]);
+  }, [row.name, options]);
 
   return (
     <div className={`elevation-row${isDuplicate ? " duplicate" : ""}`}>
-      <input
-        type="text"
-        placeholder="Elevation name (e.g. North, East Pool Side)"
-        value={value}
-        onChange={(e) => onChange(e.target.value)}
-        onFocus={() => setFocused(true)}
-        onBlur={() => setTimeout(() => setFocused(false), 120)}
-      />
-      {showRemove && (
-        <button className="remove" onClick={onRemove} type="button">
-          ✕
-        </button>
-      )}
+      <div className="fields">
+        <input
+          className="name-input"
+          type="text"
+          placeholder="Elevation name (e.g. North, East Pool Side)"
+          value={row.name}
+          onChange={(e) => onChange({ name: e.target.value })}
+          onFocus={() => setFocused(true)}
+          onBlur={() => setTimeout(() => setFocused(false), 120)}
+        />
+        <input
+          className="page-input"
+          type="text"
+          placeholder="Page #"
+          value={row.page}
+          onChange={(e) => onChange({ page: e.target.value })}
+        />
+        {showRemove && (
+          <button className="remove" onClick={onRemove} type="button">
+            ✕
+          </button>
+        )}
+      </div>
       {isDuplicate && (
         <p className="duplicate-msg">✕ Already added for this building</p>
       )}
       {focused && matches.length > 0 && (
         <div className="suggestions">
           {matches.map((m) => (
-            <div key={m} onMouseDown={() => onChange(m)}>
+            <div key={m} onMouseDown={() => onChange({ name: m })}>
               {m}
             </div>
           ))}
@@ -116,7 +128,7 @@ export default function Home() {
   const [buildingElevations, setBuildingElevations] = useState({});
   const [loadingElevationsFor, setLoadingElevationsFor] = useState(null);
   const [addingElevation, setAddingElevation] = useState(false);
-  const [elevationRows, setElevationRows] = useState([""]);
+  const [elevationRows, setElevationRows] = useState([emptyRow()]);
   const [submitting, setSubmitting] = useState(false);
   const [submitMessage, setSubmitMessage] = useState("");
 
@@ -174,29 +186,31 @@ export default function Home() {
       return;
     }
     setExpandedBuildingId(b.id);
-    setElevationRows([""]);
+    setElevationRows([emptyRow()]);
     if (!buildingElevations[b.id]) {
       loadElevationsForBuilding(b.id);
     }
   }
 
   function openAddElevation() {
-    setElevationRows([""]);
+    setElevationRows([emptyRow()]);
     setAddingElevation(true);
   }
 
   function cancelAddElevation() {
-    setElevationRows([""]);
+    setElevationRows([emptyRow()]);
     setAddingElevation(false);
     setError("");
   }
 
-  function updateRow(i, val) {
-    setElevationRows((rows) => rows.map((r, idx) => (idx === i ? val : r)));
+  function updateRow(i, patch) {
+    setElevationRows((rows) =>
+      rows.map((r, idx) => (idx === i ? { ...r, ...patch } : r))
+    );
   }
 
   function addRow() {
-    setElevationRows((rows) => [...rows, ""]);
+    setElevationRows((rows) => [...rows, emptyRow()]);
   }
 
   function removeRow(i) {
@@ -207,10 +221,10 @@ export default function Home() {
     const existingNames = (buildingElevations[buildingId] || []).map((e) =>
       e.name.trim().toLowerCase()
     );
-    const rowNamesLower = elevationRows.map((r) => r.trim().toLowerCase());
+    const rowNamesLower = elevationRows.map((r) => r.name.trim().toLowerCase());
 
-    return elevationRows.map((val) => {
-      const v = val.trim().toLowerCase();
+    return elevationRows.map((row) => {
+      const v = row.name.trim().toLowerCase();
       if (!v) return false;
       const alreadyExists = existingNames.includes(v);
       const duplicatedInBatch =
@@ -220,7 +234,10 @@ export default function Home() {
   }
 
   async function handleSubmitElevations(building) {
-    const names = elevationRows.map((r) => r.trim()).filter(Boolean);
+    const entries = elevationRows
+      .map((r) => ({ name: r.name.trim(), page: r.page.trim() }))
+      .filter((r) => r.name);
+
     if (getDuplicateFlags(building.id).some(Boolean)) {
       setError("Remove or rename duplicate elevations before submitting.");
       return;
@@ -235,21 +252,21 @@ export default function Home() {
         body: JSON.stringify({
           projectId: selectedProjectId,
           buildingId: building.id,
-          elevationNames: names,
+          elevations: entries,
           submittedBy: submitterName,
         }),
       });
       const d = await r.json();
       if (!r.ok) throw new Error(d.error || "Submission failed");
 
-      const baseMessage = names.length > 0 ? "Saved." : "Marked as reviewed.";
+      const baseMessage = entries.length > 0 ? "Saved." : "Marked as reviewed.";
       setSubmitMessage(
         d.projectCompleted
           ? `${baseMessage} All buildings in this project are now complete.`
           : baseMessage
       );
 
-      setElevationRows([""]);
+      setElevationRows([emptyRow()]);
       setAddingElevation(false);
 
       await loadElevationsForBuilding(building.id);
@@ -355,7 +372,12 @@ export default function Home() {
                       {existing && existing.length > 0 && (
                         <ul className="elevation-existing">
                           {existing.map((e) => (
-                            <li key={e.id}>{e.name}</li>
+                            <li key={e.id}>
+                              <span>{e.name}</span>
+                              {e.page && (
+                                <span className="page-tag">Page {e.page}</span>
+                              )}
+                            </li>
                           ))}
                         </ul>
                       )}
@@ -396,11 +418,11 @@ export default function Home() {
                             const hasDupe = dupeFlags.some(Boolean);
                             return (
                               <>
-                                {elevationRows.map((val, i) => (
+                                {elevationRows.map((row, i) => (
                                   <AutocompleteInput
                                     key={i}
-                                    value={val}
-                                    onChange={(v) => updateRow(i, v)}
+                                    row={row}
+                                    onChange={(patch) => updateRow(i, patch)}
                                     options={elevationOptions}
                                     onRemove={() => removeRow(i)}
                                     showRemove={elevationRows.length > 1}

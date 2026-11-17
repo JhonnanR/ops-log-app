@@ -1,4 +1,4 @@
-import { notion } from "../../lib/notion";
+import { notion, plainText } from "../../lib/notion";
 import { getPropById, hasRelationTo } from "../../lib/notion-helpers";
 import { ELEVATIONS } from "../../lib/notion-schema";
 
@@ -24,6 +24,7 @@ export default async function handler(req, res) {
         results.push({
           id: page.id,
           name: getPropById(props, ELEVATIONS.fields.elevationName)?.select?.name || "(unnamed)",
+          page: plainText(getPropById(props, ELEVATIONS.fields.page)),
         });
       }
 

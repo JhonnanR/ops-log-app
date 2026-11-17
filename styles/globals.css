@@ -34,6 +34,8 @@ button {
 .btn-secondary { background: #e7e5e4; color: #1c1c1c; }
 .row { display: flex; gap: 8px; margin-top: 20px; }
 
+.section-heading { font-size: 18px; font-weight: 700; margin: 20px 0 10px; }
+
 .building-list { display: flex; flex-direction: column; gap: 10px; margin-top: 8px; }
 .building-block { border: 1px solid #d6d3d1; border-radius: 10px; overflow: hidden; background: white; }
 .building-item {
@@ -47,8 +49,6 @@ button {
 }
 .building-item:hover { background: #fafaf9; }
 
-/* Completed buildings stay fully readable and clickable — only the
-   badge communicates status, no fading or disabled cursor. */
 .badge-done {
   display: inline-flex;
   align-items: center;
@@ -69,8 +69,6 @@ button {
   background: #fbfbfa;
 }
 
-/* Existing elevations: individually boxed, tied to the building above
-   via a left accent border and a matching soft tint. */
 .elevation-existing { list-style: none; margin: 0 0 14px; padding: 0; display: flex; flex-direction: column; gap: 6px; }
 .elevation-existing li {
   background: #eef0f7;
@@ -79,6 +77,19 @@ button {
   padding: 8px 12px;
   font-size: 14px;
   color: #2f3355;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+.page-tag {
+  font-size: 12px;
+  font-weight: 600;
+  color: #4b4f80;
+  background: #dfe2f1;
+  padding: 2px 8px;
+  border-radius: 999px;
+  white-space: nowrap;
 }
 
 .muted { color: #8a8a86; font-size: 13px; margin: 0 0 12px; }
@@ -91,10 +102,19 @@ button {
 }
 
 .elevation-row { position: relative; margin-top: 10px; }
+.elevation-row .fields { display: flex; gap: 8px; align-items: center; }
+.elevation-row .fields input.name-input { flex: 1; min-width: 0; }
+.elevation-row .fields input.page-input { width: 96px; flex: none; }
 .elevation-row .remove {
-  position: absolute; right: 6px; top: 6px;
-  background: transparent; color: #a3a3a3; font-size: 13px; padding: 4px 8px;
+  background: transparent;
+  color: #a3a3a3;
+  font-size: 13px;
+  padding: 4px 8px;
+  flex: none;
 }
+.elevation-row.duplicate .name-input { border-color: #dc2626; }
+.duplicate-msg { color: #dc2626; font-size: 12px; margin: 4px 0 0; font-weight: 600; }
+
 .suggestions {
   position: absolute;
   z-index: 10;
@@ -108,16 +128,7 @@ button {
 }
 .suggestions div { padding: 8px 12px; cursor: pointer; font-size: 14px; }
 .suggestions div:hover { background: #f5f5f4; }
-.banner {
-  background: #ecfdf5; border: 1px solid #a7f3d0; color: #065f46;
-  padding: 12px 14px; border-radius: 8px; margin-bottom: 16px; font-size: 14px;
-}
-.error {
-  background: #fef2f2; border: 1px solid #fecaca; color: #991b1b;
-  padding: 12px 14px; border-radius: 8px; margin-bottom: 16px; font-size: 14px;
-}
-.elevation-row.duplicate input { border-color: #dc2626; }
-.duplicate-msg { color: #dc2626; font-size: 12px; margin: 4px 0 0; font-weight: 600; }
+
 .project-picker { position: relative; }
 .project-suggestions .project-option {
   display: flex;
@@ -128,3 +139,12 @@ button {
 }
 .project-suggestions .project-option:hover { background: #f5f5f4; }
 .project-suggestions .project-option.done { opacity: 0.55; }
+
+.banner {
+  background: #ecfdf5; border: 1px solid #a7f3d0; color: #065f46;
+  padding: 12px 14px; border-radius: 8px; margin-bottom: 16px; font-size: 14px;
+}
+.error {
+  background: #fef2f2; border: 1px solid #fecaca; color: #991b1b;
+  padding: 12px 14px; border-radius: 8px; margin-bottom: 16px; font-size: 14px;
+}

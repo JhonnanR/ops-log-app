@@ -5,27 +5,33 @@ import { syncProjectCompletion } from "../../lib/checkProjectComplete";
 export default async function handler(req, res) {
   if (req.method !== "POST") return res.status(405).end();
 
-  const { projectId, buildingId, elevationNames, submittedBy } = req.body || {};
+  const { projectId, buildingId, elevations, submittedBy } = req.body || {};
 
-  if (!projectId || !buildingId || !Array.isArray(elevationNames)) {
+  if (!projectId || !buildingId || !Array.isArray(elevations)) {
     return res.status(400).json({ error: "Missing required fields" });
   }
 
   try {
-    // 1. Create one Elevations row per elevation name (if any).
-    // The Elevations DB no longer has a Project column, so each row links
-    // only to its building.
+    // 1. Create one Elevations row per elevation (name + optional page number).
     const e = ELEVATIONS.fields;
-    for (const name of elevationNames) {
+    for (const item of elevations) {
+      const properties = {
+        [e.buildingName]: { relation: [{ id: buildingId }] },
+        [e.elevationName]: { select: { name: item.name } },
+        [e.submittedBy]: {
+          rich_text: [{ text: { content: submittedBy || "" } }],
+        },
+      };
+
+      if (item.page) {
+        properties[e.page] = {
+          rich_text: [{ text: { content: item.page } }],
+        };
+      }
+
       await notion.pages.create({
         parent: { database_id: ELEVATIONS.dataSource },
-        properties: {
-          [e.buildingName]: { relation: [{ id: buildingId }] },
-          [e.elevationName]: { select: { name } },
-          [e.submittedBy]: {
-            rich_text: [{ text: { content: submittedBy || "" } }],
-          },
-        },
+        properties,
       });
     }
 
