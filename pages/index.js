@@ -101,7 +101,7 @@ function ProjectPicker({ projects, value, onSelect }) {
         onChange={handleInputChange}
         onFocus={() => setShowDropdown(true)}
         onBlur={() => setTimeout(() => setShowDropdown(false), 150)}
-        placeholder="Search projects…"
+        placeholder="Search for project…"
       />
       {showDropdown && filtered.length > 0 && (
         <div className="suggestions project-suggestions">
