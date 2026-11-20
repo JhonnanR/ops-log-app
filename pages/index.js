@@ -1,8 +1,20 @@
 import { useEffect, useMemo, useState } from "react";
 
 const emptyRow = () => ({ name: "", page: "", sq: "" });
+const round2 = (n) => Math.round(n * 100) / 100;
+const toNumber = (v) => Number(String(v).replace(/[,%]/g, "").trim());
 
-function AutocompleteInput({ row, onChange, options, onRemove, showRemove, isDuplicate }) {
+function AutocompleteInput({
+  row,
+  onChange,
+  options,
+  onRemove,
+  showRemove,
+  isDuplicate,
+  remaining,
+  over,
+  buildingSq,
+}) {
   const [focused, setFocused] = useState(false);
 
   const matches = useMemo(() => {
@@ -12,6 +24,13 @@ function AutocompleteInput({ row, onChange, options, onRemove, showRemove, isDup
       .filter((o) => o.toLowerCase().startsWith(q) && o.toLowerCase() !== q)
       .slice(0, 8);
   }, [row.name, options]);
+
+  const pctNum = toNumber(row.sq);
+  const showFootage =
+    buildingSq !== null &&
+    buildingSq !== undefined &&
+    row.sq.trim() !== "" &&
+    Number.isFinite(pctNum);
 
   return (
     <div className={`elevation-row${isDuplicate ? " duplicate" : ""}`}>
@@ -41,21 +60,35 @@ function AutocompleteInput({ row, onChange, options, onRemove, showRemove, isDup
         </div>
       )}
       <div className="fields sub">
-        <input
-          className="page-input"
-          type="text"
-          placeholder="Page (e.g. [A-203])"
-          value={row.page}
-          onChange={(e) => onChange({ page: e.target.value })}
-        />
-        <input
-          className="sq-input"
-          type="text"
-          inputMode="decimal"
-          placeholder="SQ. (Gross)"
-          value={row.sq}
-          onChange={(e) => onChange({ sq: e.target.value })}
-        />
+        <div className="col">
+          <input
+            className="page-input"
+            type="text"
+            placeholder="Page (e.g. [A-203])"
+            value={row.page}
+            onChange={(e) => onChange({ page: e.target.value })}
+          />
+        </div>
+        <div className="col">
+          <input
+            className="sq-input"
+            type="text"
+            inputMode="decimal"
+            placeholder="SQ. % (e.g. 25)"
+            value={row.sq}
+            onChange={(e) => onChange({ sq: e.target.value })}
+          />
+          <p className={`remaining${over ? " over" : ""}`}>
+            {over
+              ? `Over by ${round2(-remaining)}%`
+              : `Percent of SQ available: ${remaining}%`}
+          </p>
+          {showFootage && (
+            <p style={{ margin: "4px 0 0", fontSize: 13, color: "#6b6b6b" }}>
+              ≈ {round2((pctNum / 100) * buildingSq).toLocaleString()} SQ.
+            </p>
+          )}
+        </div>
       </div>
       {isDuplicate && (
         <p className="duplicate-msg">✕ Already added for this building</p>
@@ -142,6 +175,10 @@ export default function Home() {
   const [submitting, setSubmitting] = useState(false);
   const [submitMessage, setSubmitMessage] = useState("");
 
+  // Edits to percentages of already-saved elevations: { [elevationId]: "text" }
+  const [editValues, setEditValues] = useState({});
+  const [savingEditId, setSavingEditId] = useState(null);
+
   useEffect(() => {
     fetch("/api/projects")
       .then((r) => r.json())
@@ -190,6 +227,7 @@ export default function Home() {
   function toggleBuilding(b) {
     setSubmitMessage("");
     setError("");
+    setEditValues({});
     if (expandedBuildingId === b.id) {
       setExpandedBuildingId(null);
       setAddingElevation(false);
@@ -207,6 +245,7 @@ export default function Home() {
     setExpandedBuildingId(null);
     setAddingElevation(false);
     setElevationRows([emptyRow()]);
+    setEditValues({});
     setSubmitMessage("");
     setError("");
   }
@@ -252,7 +291,14 @@ export default function Home() {
     });
   }
 
-  async function handleSubmitElevations(building) {
+  // How much of the building's 100% is used (saved + typed now) and what
+  // is left. Going over 100 is allowed; it is only shown.
+  function getPercentInfo(buildingId) {
+    const savedTotal = (buildingElevations[buildingId] || []).reduce(
+      (sum, e) => sum + (Number(e.pct) || 0),
+      0
+    );
+
     const entries = elevationRows
       .map((r) => ({
         name: r.name.trim(),
@@ -261,16 +307,41 @@ export default function Home() {
       }))
       .filter((r) => r.name);
 
+    const invalid = entries.find(
+      (r) =>
+        r.sq !== "" && (!Number.isFinite(toNumber(r.sq)) || toNumber(r.sq) <= 0)
+    );
+
+    const newTotal = elevationRows.reduce((sum, r) => {
+      const raw = r.sq.trim();
+      const v = toNumber(raw);
+      return sum + (raw !== "" && Number.isFinite(v) ? v : 0);
+    }, 0);
+
+    const total = round2(savedTotal + newTotal);
+
+    return {
+      entries,
+      invalid,
+      total,
+      remaining: round2(100 - total),
+      over: total > 100,
+    };
+  }
+
+  async function handleSubmitElevations(building) {
+    const info = getPercentInfo(building.id);
+    const entries = info.entries;
+
     if (getDuplicateFlags(building.id).some(Boolean)) {
       setError("Remove or rename duplicate elevations before submitting.");
       return;
     }
 
-    const badSq = entries.find(
-      (r) => r.sq !== "" && !Number.isFinite(Number(r.sq.replace(/,/g, "")))
-    );
-    if (badSq) {
-      setError(`SQ. (Gross) for "${badSq.name}" must be a number.`);
+    if (entries.length > 0 && info.invalid) {
+      setError(
+        `The percentage for "${info.invalid.name}" must be a number greater than 0.`
+      );
       return;
     }
 
@@ -284,7 +355,11 @@ export default function Home() {
         body: JSON.stringify({
           projectId: selectedProjectId,
           buildingId: building.id,
-          elevations: entries,
+          elevations: entries.map((x) => ({
+            name: x.name,
+            page: x.page,
+            sq: x.sq === "" ? null : toNumber(x.sq),
+          })),
           submittedBy: submitterName,
         }),
       });
@@ -314,10 +389,62 @@ export default function Home() {
     }
   }
 
+  function savedEditText(e) {
+    return e.pct === null || e.pct === undefined ? "" : String(e.pct);
+  }
+
+  function isEdited(e) {
+    return (
+      editValues[e.id] !== undefined &&
+      editValues[e.id].trim() !== savedEditText(e)
+    );
+  }
+
+  async function saveElevationPercent(buildingId, e) {
+    const raw = (editValues[e.id] ?? "").trim();
+    if (raw !== "") {
+      const n = toNumber(raw);
+      if (!Number.isFinite(n) || n < 0) {
+        setError(`The percentage for "${e.name}" must be a number.`);
+        return;
+      }
+    }
+
+    setSavingEditId(e.id);
+    setError("");
+    setSubmitMessage("");
+    try {
+      const r = await fetch("/api/update-elevation", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          elevationId: e.id,
+          buildingId,
+          sq: raw === "" ? null : toNumber(raw),
+        }),
+      });
+      const d = await r.json();
+      if (!r.ok) throw new Error(d.error || "Update failed");
+
+      setEditValues((prev) => {
+        const next = { ...prev };
+        delete next[e.id];
+        return next;
+      });
+      await loadElevationsForBuilding(buildingId);
+      setSubmitMessage("Percentage updated.");
+    } catch (err) {
+      setError(err.message || "Something went wrong.");
+    } finally {
+      setSavingEditId(null);
+    }
+  }
+
   function handleStartOver() {
     setSelectedProjectId("");
     setExpandedBuildingId(null);
     setBuildingElevations({});
+    setEditValues({});
     setSubmitMessage("");
     setAddingElevation(false);
     fetch("/api/projects")
@@ -434,6 +561,38 @@ export default function Home() {
                                     {Number(e.sq).toLocaleString()} SQ.
                                   </span>
                                 )}
+                                <span className="pct-edit">
+                                  <input
+                                    className="pct-input"
+                                    type="text"
+                                    inputMode="decimal"
+                                    placeholder="%"
+                                    value={
+                                      editValues[e.id] !== undefined
+                                        ? editValues[e.id]
+                                        : savedEditText(e)
+                                    }
+                                    onChange={(ev) =>
+                                      setEditValues((prev) => ({
+                                        ...prev,
+                                        [e.id]: ev.target.value,
+                                      }))
+                                    }
+                                  />
+                                  <span className="pct-sign">%</span>
+                                  {isEdited(e) && (
+                                    <button
+                                      className="btn-primary btn-tiny"
+                                      type="button"
+                                      disabled={savingEditId === e.id}
+                                      onClick={() =>
+                                        saveElevationPercent(b.id, e)
+                                      }
+                                    >
+                                      {savingEditId === e.id ? "…" : "Save"}
+                                    </button>
+                                  )}
+                                </span>
                               </span>
                             </li>
                           ))}
@@ -474,6 +633,9 @@ export default function Home() {
                           {(() => {
                             const dupeFlags = getDuplicateFlags(b.id);
                             const hasDupe = dupeFlags.some(Boolean);
+                            const info = getPercentInfo(b.id);
+                            const percentOk =
+                              info.entries.length === 0 || !info.invalid;
                             return (
                               <>
                                 {elevationRows.map((row, i) => (
@@ -485,6 +647,9 @@ export default function Home() {
                                     onRemove={() => removeRow(i)}
                                     showRemove={elevationRows.length > 1}
                                     isDuplicate={dupeFlags[i]}
+                                    remaining={info.remaining}
+                                    over={info.over}
+                                    buildingSq={b.sqGross}
                                   />
                                 ))}
                                 <div className="row">
@@ -499,7 +664,7 @@ export default function Home() {
                                 <div className="row">
                                   <button
                                     className="btn-primary"
-                                    disabled={submitting || hasDupe}
+                                    disabled={submitting || hasDupe || !percentOk}
                                     onClick={() => handleSubmitElevations(b)}
                                   >
                                     {submitting ? "Saving…" : "Submit"}

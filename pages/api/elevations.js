@@ -22,13 +22,15 @@ export default async function handler(req, res) {
         const props = page.properties;
         if (!hasRelationTo(props, buildingId)) continue;
 
-        // Works whether sqGross holds a permanent ID or a column name.
+        // Works whether the field holds a permanent ID or a column name.
+        const pctProp = getPropById(props, f.sqPercent) || props[f.sqPercent];
         const sqProp = getPropById(props, f.sqGross) || props[f.sqGross];
 
         results.push({
           id: page.id,
           name: getPropById(props, f.elevationName)?.select?.name || "(unnamed)",
           page: plainText(getPropById(props, f.page)),
+          pct: pctProp?.number ?? null,
           sq: sqProp?.number ?? null,
         });
       }

@@ -26,6 +26,7 @@ export default async function handler(req, res) {
           id: page.id,
           name: plainText(getPropById(props, BUILDINGS.fields.name)),
           opsLogCreated: !!getPropById(props, BUILDINGS.fields.opsLogCreated)?.checkbox,
+          sqGross: getPropById(props, BUILDINGS.fields.sqGross)?.number ?? null,
         });
       }
 

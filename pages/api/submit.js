@@ -1,6 +1,9 @@
 import { notion } from "../../lib/notion";
+import { getPropById } from "../../lib/notion-helpers";
 import { BUILDINGS, ELEVATIONS } from "../../lib/notion-schema";
 import { syncProjectCompletion } from "../../lib/checkProjectComplete";
+
+const round2 = (n) => Math.round(n * 100) / 100;
 
 export default async function handler(req, res) {
   if (req.method !== "POST") return res.status(405).end();
@@ -12,9 +15,21 @@ export default async function handler(req, res) {
   }
 
   try {
-    // 1. Create one Elevations row per elevation
-    //    (name, optional page number, optional SQ. gross).
     const e = ELEVATIONS.fields;
+
+    // Look up the building's SQ. (Gross) once, to turn each percent into
+    // square footage.
+    let buildingSq = null;
+    const hasPercent = elevations.some(
+      (i) => i.sq !== null && i.sq !== undefined && String(i.sq).trim() !== ""
+    );
+    if (hasPercent) {
+      const building = await notion.pages.retrieve({ page_id: buildingId });
+      buildingSq =
+        getPropById(building.properties, BUILDINGS.fields.sqGross)?.number ?? null;
+    }
+
+    // 1. Create one Elevations row per elevation.
     for (const item of elevations) {
       const properties = {
         [e.buildingName]: { relation: [{ id: buildingId }] },
@@ -30,10 +45,13 @@ export default async function handler(req, res) {
         };
       }
 
-      if (item.sq !== undefined && item.sq !== null && String(item.sq).trim() !== "") {
-        const sqNumber = Number(String(item.sq).replace(/,/g, ""));
-        if (Number.isFinite(sqNumber)) {
-          properties[e.sqGross] = { number: sqNumber };
+      if (item.sq !== null && item.sq !== undefined && String(item.sq).trim() !== "") {
+        const pct = Number(String(item.sq).replace(/[,%]/g, ""));
+        if (Number.isFinite(pct)) {
+          properties[e.sqPercent] = { number: pct };
+          if (buildingSq !== null) {
+            properties[e.sqGross] = { number: round2((pct / 100) * buildingSq) };
+          }
         }
       }
 

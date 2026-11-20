@@ -34,6 +34,7 @@ button {
 .btn-secondary { background: #e7e5e4; color: #1c1c1c; }
 .btn-secondary:disabled { opacity: 0.5; cursor: not-allowed; }
 .btn-small { padding: 6px 12px; font-size: 13px; }
+.btn-tiny { padding: 4px 10px; font-size: 12px; }
 .row { display: flex; gap: 8px; margin-top: 20px; }
 
 .hint { color: #1c1c1c; font-size: 14px; font-weight: 500; margin: 12px 0 0; }
@@ -101,7 +102,7 @@ button {
   justify-content: space-between;
   gap: 8px;
 }
-.tags { display: flex; gap: 6px; flex-wrap: wrap; justify-content: flex-end; }
+.tags { display: flex; gap: 8px; flex-wrap: wrap; justify-content: flex-end; align-items: center; }
 .page-tag {
   font-size: 12px;
   font-weight: 600;
@@ -111,6 +112,15 @@ button {
   border-radius: 999px;
   white-space: nowrap;
 }
+
+.pct-edit { display: flex; align-items: center; gap: 4px; }
+.pct-edit input.pct-input {
+  width: 64px;
+  padding: 4px 8px;
+  font-size: 13px;
+  border-radius: 6px;
+}
+.pct-sign { font-size: 13px; font-weight: 600; color: #4b4f80; }
 
 .muted { color: #8a8a86; font-size: 13px; margin: 0 0 12px; }
 
@@ -123,10 +133,9 @@ button {
 
 .elevation-row { position: relative; margin-top: 12px; }
 .elevation-row .fields { display: flex; gap: 8px; align-items: center; }
-.elevation-row .fields.sub { margin-top: 8px; }
+.elevation-row .fields.sub { margin-top: 8px; align-items: flex-start; }
 .elevation-row .fields input.name-input { flex: 1; min-width: 0; }
-.elevation-row .fields input.page-input,
-.elevation-row .fields input.sq-input { flex: 1; min-width: 0; }
+.elevation-row .fields .col { flex: 1; min-width: 0; }
 .elevation-row .remove {
   background: transparent;
   color: #a3a3a3;
@@ -136,6 +145,14 @@ button {
 }
 .elevation-row.duplicate .name-input { border-color: #dc2626; }
 .duplicate-msg { color: #dc2626; font-size: 12px; margin: 4px 0 0; font-weight: 600; }
+
+.remaining {
+  margin: 6px 0 0;
+  font-size: 14px;
+  font-weight: 700;
+  color: #1c1c1c;
+}
+.remaining.over { color: #dc2626; }
 
 .suggestions {
   position: absolute;
