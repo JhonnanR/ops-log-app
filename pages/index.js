@@ -175,8 +175,9 @@ export default function Home() {
   const [submitting, setSubmitting] = useState(false);
   const [submitMessage, setSubmitMessage] = useState("");
 
-  // Edits to percentages of already-saved elevations: { [elevationId]: "text" }
-  const [editValues, setEditValues] = useState({});
+  // Editing an already-saved elevation (page number + SQ. %).
+  const [editingId, setEditingId] = useState(null);
+  const [editDraft, setEditDraft] = useState({ page: "", sq: "" });
   const [savingEditId, setSavingEditId] = useState(null);
 
   useEffect(() => {
@@ -227,7 +228,7 @@ export default function Home() {
   function toggleBuilding(b) {
     setSubmitMessage("");
     setError("");
-    setEditValues({});
+    cancelEdit();
     if (expandedBuildingId === b.id) {
       setExpandedBuildingId(null);
       setAddingElevation(false);
@@ -245,7 +246,7 @@ export default function Home() {
     setExpandedBuildingId(null);
     setAddingElevation(false);
     setElevationRows([emptyRow()]);
-    setEditValues({});
+    cancelEdit();
     setSubmitMessage("");
     setError("");
   }
@@ -389,23 +390,27 @@ export default function Home() {
     }
   }
 
-  function savedEditText(e) {
-    return e.pct === null || e.pct === undefined ? "" : String(e.pct);
+  function startEdit(e) {
+    setError("");
+    setSubmitMessage("");
+    setEditingId(e.id);
+    setEditDraft({
+      page: e.page || "",
+      sq: e.pct === null || e.pct === undefined ? "" : String(e.pct),
+    });
   }
 
-  function isEdited(e) {
-    return (
-      editValues[e.id] !== undefined &&
-      editValues[e.id].trim() !== savedEditText(e)
-    );
+  function cancelEdit() {
+    setEditingId(null);
+    setEditDraft({ page: "", sq: "" });
   }
 
-  async function saveElevationPercent(buildingId, e) {
-    const raw = (editValues[e.id] ?? "").trim();
-    if (raw !== "") {
-      const n = toNumber(raw);
+  async function saveEdit(buildingId, e) {
+    const rawSq = editDraft.sq.trim();
+    if (rawSq !== "") {
+      const n = toNumber(rawSq);
       if (!Number.isFinite(n) || n < 0) {
-        setError(`The percentage for "${e.name}" must be a number.`);
+        setError(`The SQ. % for "${e.name}" must be a number.`);
         return;
       }
     }
@@ -420,19 +425,16 @@ export default function Home() {
         body: JSON.stringify({
           elevationId: e.id,
           buildingId,
-          sq: raw === "" ? null : toNumber(raw),
+          sq: rawSq === "" ? null : toNumber(rawSq),
+          page: editDraft.page.trim(),
         }),
       });
       const d = await r.json();
       if (!r.ok) throw new Error(d.error || "Update failed");
 
-      setEditValues((prev) => {
-        const next = { ...prev };
-        delete next[e.id];
-        return next;
-      });
+      cancelEdit();
       await loadElevationsForBuilding(buildingId);
-      setSubmitMessage("Percentage updated.");
+      setSubmitMessage("Elevation updated.");
     } catch (err) {
       setError(err.message || "Something went wrong.");
     } finally {
@@ -444,7 +446,7 @@ export default function Home() {
     setSelectedProjectId("");
     setExpandedBuildingId(null);
     setBuildingElevations({});
-    setEditValues({});
+    cancelEdit();
     setSubmitMessage("");
     setAddingElevation(false);
     fetch("/api/projects")
@@ -552,48 +554,77 @@ export default function Home() {
                           {existing.map((e) => (
                             <li key={e.id}>
                               <span>{e.name}</span>
-                              <span className="tags">
-                                {e.page && (
-                                  <span className="page-tag">Page {e.page}</span>
-                                )}
-                                {e.sq !== null && e.sq !== undefined && (
-                                  <span className="page-tag">
-                                    {Number(e.sq).toLocaleString()} SQ.
-                                  </span>
-                                )}
-                                <span className="pct-edit">
-                                  <input
-                                    className="pct-input"
-                                    type="text"
-                                    inputMode="decimal"
-                                    placeholder="%"
-                                    value={
-                                      editValues[e.id] !== undefined
-                                        ? editValues[e.id]
-                                        : savedEditText(e)
-                                    }
-                                    onChange={(ev) =>
-                                      setEditValues((prev) => ({
-                                        ...prev,
-                                        [e.id]: ev.target.value,
-                                      }))
-                                    }
-                                  />
-                                  <span className="pct-sign">%</span>
-                                  {isEdited(e) && (
-                                    <button
-                                      className="btn-primary btn-tiny"
-                                      type="button"
-                                      disabled={savingEditId === e.id}
-                                      onClick={() =>
-                                        saveElevationPercent(b.id, e)
+                              {editingId === e.id ? (
+                                <span className="tags">
+                                  <span className="pct-edit">
+                                    <input
+                                      className="pct-input"
+                                      style={{ width: 96 }}
+                                      type="text"
+                                      placeholder="Page"
+                                      value={editDraft.page}
+                                      onChange={(ev) =>
+                                        setEditDraft((d) => ({
+                                          ...d,
+                                          page: ev.target.value,
+                                        }))
                                       }
-                                    >
-                                      {savingEditId === e.id ? "…" : "Save"}
-                                    </button>
-                                  )}
+                                    />
+                                  </span>
+                                  <span className="pct-edit">
+                                    <input
+                                      className="pct-input"
+                                      type="text"
+                                      inputMode="decimal"
+                                      placeholder="SQ. %"
+                                      value={editDraft.sq}
+                                      onChange={(ev) =>
+                                        setEditDraft((d) => ({
+                                          ...d,
+                                          sq: ev.target.value,
+                                        }))
+                                      }
+                                    />
+                                    <span className="pct-sign">%</span>
+                                  </span>
+                                  <button
+                                    className="btn-primary btn-tiny"
+                                    type="button"
+                                    disabled={savingEditId === e.id}
+                                    onClick={() => saveEdit(b.id, e)}
+                                  >
+                                    {savingEditId === e.id ? "…" : "Save"}
+                                  </button>
+                                  <button
+                                    className="btn-secondary btn-tiny"
+                                    type="button"
+                                    onClick={cancelEdit}
+                                  >
+                                    Cancel
+                                  </button>
                                 </span>
-                              </span>
+                              ) : (
+                                <span className="tags">
+                                  {e.page && (
+                                    <span className="page-tag">Page {e.page}</span>
+                                  )}
+                                  {e.pct !== null && e.pct !== undefined && (
+                                    <span className="page-tag">{Number(e.pct)}%</span>
+                                  )}
+                                  {e.sq !== null && e.sq !== undefined && (
+                                    <span className="page-tag">
+                                      {Number(e.sq).toLocaleString()} SQ.
+                                    </span>
+                                  )}
+                                  <button
+                                    className="btn-secondary btn-tiny"
+                                    type="button"
+                                    onClick={() => startEdit(e)}
+                                  >
+                                    Edit
+                                  </button>
+                                </span>
+                              )}
                             </li>
                           ))}
                         </ul>

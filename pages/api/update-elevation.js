@@ -7,7 +7,7 @@ const round2 = (n) => Math.round(n * 100) / 100;
 export default async function handler(req, res) {
   if (req.method !== "POST") return res.status(405).end();
 
-  const { elevationId, buildingId, sq } = req.body || {};
+  const { elevationId, buildingId, sq, page } = req.body || {};
   if (!elevationId) {
     return res.status(400).json({ error: "elevationId required" });
   }
@@ -33,12 +33,22 @@ export default async function handler(req, res) {
       }
     }
 
+    const properties = {
+      [ELEVATIONS.fields.sqPercent]: { number: pct },
+      [ELEVATIONS.fields.sqGross]: { number: footage },
+    };
+
+    // Page number: blank clears it. Left alone if not sent at all.
+    if (page !== undefined && page !== null) {
+      const text = String(page).trim();
+      properties[ELEVATIONS.fields.page] = {
+        rich_text: text ? [{ text: { content: text } }] : [],
+      };
+    }
+
     await notion.pages.update({
       page_id: elevationId,
-      properties: {
-        [ELEVATIONS.fields.sqPercent]: { number: pct },
-        [ELEVATIONS.fields.sqGross]: { number: footage },
-      },
+      properties,
     });
     res.status(200).json({ success: true });
   } catch (err) {
