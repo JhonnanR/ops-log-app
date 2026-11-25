@@ -34,7 +34,6 @@ button {
 .btn-secondary { background: #e7e5e4; color: #1c1c1c; }
 .btn-secondary:disabled { opacity: 0.5; cursor: not-allowed; }
 .btn-small { padding: 6px 12px; font-size: 13px; }
-.btn-tiny { padding: 4px 10px; font-size: 12px; }
 .row { display: flex; gap: 8px; margin-top: 20px; }
 
 .hint { color: #1c1c1c; font-size: 14px; font-weight: 500; margin: 12px 0 0; }
@@ -97,12 +96,14 @@ button {
   padding: 8px 12px;
   font-size: 14px;
   color: #2f3355;
+}
+.elev-top {
   display: flex;
   align-items: center;
-  justify-content: space-between;
   gap: 8px;
 }
-.tags { display: flex; gap: 8px; flex-wrap: wrap; justify-content: flex-end; align-items: center; }
+.elev-name { flex: 1; min-width: 0; font-weight: 600; }
+.tags { display: flex; gap: 6px; flex-wrap: wrap; justify-content: flex-end; align-items: center; }
 .page-tag {
   font-size: 12px;
   font-weight: 600;
@@ -113,14 +114,31 @@ button {
   white-space: nowrap;
 }
 
-.pct-edit { display: flex; align-items: center; gap: 4px; }
-.pct-edit input.pct-input {
-  width: 64px;
-  padding: 4px 8px;
-  font-size: 13px;
-  border-radius: 6px;
+.edit-btn {
+  flex: none;
+  width: 32px;
+  height: 32px;
+  padding: 0;
+  border-radius: 8px;
+  background: white;
+  color: #4b4f80;
+  border: 1px solid #c9cde6;
+  font-size: 18px;
+  line-height: 1;
 }
-.pct-sign { font-size: 13px; font-weight: 600; color: #4b4f80; }
+.edit-btn:hover { background: #dfe2f1; }
+
+.elev-edit {
+  margin-top: 10px;
+  padding-top: 10px;
+  border-top: 1px solid #d3d7ea;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.elev-edit .edit-fields { display: flex; gap: 8px; }
+.elev-edit .edit-fields .col { flex: 1; min-width: 0; }
+.elev-edit label { margin: 0 0 4px; font-size: 12px; color: #4b4f80; }
 
 .muted { color: #8a8a86; font-size: 13px; margin: 0 0 12px; }
 

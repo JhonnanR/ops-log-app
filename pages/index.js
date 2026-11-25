@@ -553,57 +553,8 @@ export default function Home() {
                         <ul className="elevation-existing">
                           {existing.map((e) => (
                             <li key={e.id}>
-                              <span>{e.name}</span>
-                              {editingId === e.id ? (
-                                <span className="tags">
-                                  <span className="pct-edit">
-                                    <input
-                                      className="pct-input"
-                                      style={{ width: 96 }}
-                                      type="text"
-                                      placeholder="Page"
-                                      value={editDraft.page}
-                                      onChange={(ev) =>
-                                        setEditDraft((d) => ({
-                                          ...d,
-                                          page: ev.target.value,
-                                        }))
-                                      }
-                                    />
-                                  </span>
-                                  <span className="pct-edit">
-                                    <input
-                                      className="pct-input"
-                                      type="text"
-                                      inputMode="decimal"
-                                      placeholder="SQ. %"
-                                      value={editDraft.sq}
-                                      onChange={(ev) =>
-                                        setEditDraft((d) => ({
-                                          ...d,
-                                          sq: ev.target.value,
-                                        }))
-                                      }
-                                    />
-                                    <span className="pct-sign">%</span>
-                                  </span>
-                                  <button
-                                    className="btn-primary btn-tiny"
-                                    type="button"
-                                    disabled={savingEditId === e.id}
-                                    onClick={() => saveEdit(b.id, e)}
-                                  >
-                                    {savingEditId === e.id ? "…" : "Save"}
-                                  </button>
-                                  <button
-                                    className="btn-secondary btn-tiny"
-                                    type="button"
-                                    onClick={cancelEdit}
-                                  >
-                                    Cancel
-                                  </button>
-                                </span>
-                              ) : (
+                              <div className="elev-top">
+                                <span className="elev-name">{e.name}</span>
                                 <span className="tags">
                                   {e.page && (
                                     <span className="page-tag">Page {e.page}</span>
@@ -616,14 +567,71 @@ export default function Home() {
                                       {Number(e.sq).toLocaleString()} SQ.
                                     </span>
                                   )}
-                                  <button
-                                    className="btn-secondary btn-tiny"
-                                    type="button"
-                                    onClick={() => startEdit(e)}
-                                  >
-                                    Edit
-                                  </button>
                                 </span>
+                                <button
+                                  className="edit-btn"
+                                  type="button"
+                                  title="Edit page # or SQ. %"
+                                  aria-label={`Edit ${e.name}`}
+                                  onClick={() =>
+                                    editingId === e.id ? cancelEdit() : startEdit(e)
+                                  }
+                                >
+                                  ⋯
+                                </button>
+                              </div>
+
+                              {editingId === e.id && (
+                                <div className="elev-edit">
+                                  <div className="edit-fields">
+                                    <div className="col">
+                                      <label>Page #</label>
+                                      <input
+                                        type="text"
+                                        placeholder="e.g. [A-203]"
+                                        value={editDraft.page}
+                                        onChange={(ev) =>
+                                          setEditDraft((d) => ({
+                                            ...d,
+                                            page: ev.target.value,
+                                          }))
+                                        }
+                                      />
+                                    </div>
+                                    <div className="col">
+                                      <label>SQ. %</label>
+                                      <input
+                                        type="text"
+                                        inputMode="decimal"
+                                        placeholder="e.g. 25"
+                                        value={editDraft.sq}
+                                        onChange={(ev) =>
+                                          setEditDraft((d) => ({
+                                            ...d,
+                                            sq: ev.target.value,
+                                          }))
+                                        }
+                                      />
+                                    </div>
+                                  </div>
+                                  <div className="row" style={{ marginTop: 0 }}>
+                                    <button
+                                      className="btn-primary btn-small"
+                                      type="button"
+                                      disabled={savingEditId === e.id}
+                                      onClick={() => saveEdit(b.id, e)}
+                                    >
+                                      {savingEditId === e.id ? "Saving…" : "Save"}
+                                    </button>
+                                    <button
+                                      className="btn-secondary btn-small"
+                                      type="button"
+                                      onClick={cancelEdit}
+                                    >
+                                      Cancel
+                                    </button>
+                                  </div>
+                                </div>
                               )}
                             </li>
                           ))}
